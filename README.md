@@ -100,16 +100,6 @@ If you wish to reproduce experiments, please contact Alliander for access to sim
 
 ---
 
-## 📊 Results
-
-The proposed approach achieves:
-
-* High robustness against **incomplete or noisy data**.
-* Over **95% accuracy** in switch state and phase identification with realistic smart meter coverage.
-* Significant improvement in **topology correction** accuracy compared to existing data-driven baselines.
-
----
-
 ## 🤝 Collaboration Acknowledgement
 
 This research and code were developed in collaboration with **Alliander N.V.**
@@ -131,24 +121,3 @@ If you use this code or methodology, please cite:
   year={2025}
 }
 ```
-
----
-
-## 🧑‍💻 License
-
-This project is released under the **MIT License**.
-Please check the `LICENSE` file for details.
-
----
-
-## 📬 Contact
-
-For academic or collaboration inquiries:
-
-* **Dong Liu** – Delft University of Technology
-  Email: [add your TU Delft email]
-
-* **Pedro P. Vergara (corresponding author)** – Delft University of Technology
-  Email: [p.p.vergarabarrios@tudelft.nl](mailto:p.p.vergarabarrios@tudelft.nl)
-
----
