@@ -1,5 +1,3 @@
-# Data-driven-approach-for-topology-correction-in-LVDNs-
-
 
 # A Data-Driven Approach for Topology Correction in Low Voltage Networks with DERs
 
