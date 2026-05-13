@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov  4 13:15:35 2024
 
-@author: dliu8
-"""
 
-# =============================================================================
-# successfully on 04/11/2024
-# =============================================================================
+
+
+
 
 import numpy as np
 import pandas as pd
@@ -19,27 +14,47 @@ import math
 from collections import Counter
 from sklearn.neighbors import KNeighborsClassifier
 
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
+
+
 
 
 nn = 0.50           # percentage of the unknown information
-nn_mising = 0.10    # percentage of the random missing data point
-k = 3               # parameters of the traditional KNN algorithms
+nn_mising = 0.50    # percentage of the random missing data point
+k = 5               # parameters of the traditional KNN algorithms
+error_level = 0.05  # add error (0.0 %, 0.2 %, 0.5 %, 1 %, 2 %, and 5 %).
 
-for tt in range(9): # to run it multiple times and obtain the avrage 
-    V = pd.read_csv(r'C:\Users\dliu8\Desktop\Graduate School files\Conrerences and workshop\Alliander-06-12-2022\code\single_phase_qgis_imp\complex_network\three_phases\multiple_per_node/simulated_voltage_data_0.csv')
+for tt in range(1): # to run it multiple times and obtain the avrage 
+    # V = your own datasets
+    V = pd.read_csv(BASE_DIR /"simulated_voltage_data_0_noise_1.csv") # need you put the excel or csv datasets in the same folders
+
     
-    # V = pd.read_csv(r'C:\Users\dliu8\Desktop\Graduate School files\Conrerences and workshop\Alliander-06-12-2022\code\single_phase_qgis_imp\simple_network\three_phases\multiple_per_node/simulated_voltage_data_0.csv')
-    # 
-    # V = pd.read_csv(r'C:\Users\dliu8\Desktop\Graduate School files\Conrerences and workshop\Alliander-06-12-2022\code\single_phase_qgis_imp\network_with_branch\three_phases\multiple_per_node/simulated_voltage_data_0.csv')
-    # ------------------------
-    # V = pd.read_csv(r'C:\Users\dliu8\Desktop\Graduate School files\Conrerences and workshop\Alliander-06-12-2022\code\single_phase_qgis_imp\three_cables_all_complex\three_phase\multiple_per_node/simulated_voltage_data_rounded_2.csv')
+    # 1. 
+    cols_to_drop = ['Unnamed: 0', 'timestamp']
+    V = V.drop(columns=[c for c in cols_to_drop if c in V.columns])
     
+    # 2. 
+    V = V.apply(pd.to_numeric, errors='coerce')
     
-    V = np.array(V)
-    V = V[1:,1:]/230 # the scaler 230 does not bring enhancement
-    # -----------------------------------------------------------------------------
+    # 3. 
+    V = V.dropna(axis=0)
+    V = V.iloc[1:, :]
     
-    # =============================================================================
+    # 4. 
+    V_matrix = V.values.astype(np.float64) / 230
+
+        
+    # 5. 
+    print(f"data: {V_matrix.shape}")
+    print(f"data: {V_matrix.dtype}")
+    
+   #-------------------
+
+    noise_matrix = np.random.normal(1, error_level/3, size=V.shape)
+    V = V * noise_matrix
+  
+
     #  missing percentage
     num_cols = V.shape[1]
     num_cols_to_delete = int(num_cols * nn_mising)
@@ -48,23 +63,12 @@ for tt in range(9): # to run it multiple times and obtain the avrage
     
     # =============================================================================
     
-    if len(V) ==63:
+    if len(V) ==63:  # your own labels
         labels0 = np.zeros((V.shape[0], 1), dtype=int)
         labels0[0:43] = 1
         labels0[43:63] = 2
-        
-    if len(V) ==54:
-        labels0 = np.zeros((V.shape[0], 1), dtype=int)
-        labels0[0:34] = 1
-        labels0[34:] = 2
-            
-    if len(V) == 129:
-        labels0 = np.zeros((V.shape[0], 1), dtype=int)
-        labels0[0:43] = 1
-        labels0[43:43*2] = 2
-        labels0[86:] = 3
+
     
-        
     def calculate_accuracy(predicted_labels, true_labels):
       correct_predictions = np.sum(predicted_labels == true_labels)
       total_predictions = len(predicted_labels)
@@ -82,78 +86,26 @@ for tt in range(9): # to run it multiple times and obtain the avrage
         for j in range(V.shape[0]):
             pearson_corr[i, j], _ = stats.pearsonr(V[i], V[j]) 
             pearson_corr[i, j] = math.log((1 + pearson_corr[i, j])/((1-pearson_corr[i, j] + 0.5)))  # for single-phase data works well in simplifed networks
+        
     
-    
-   
     # =============================================================================
     # suceessfully on 04/11/2024
     # based on pearson_corr
     # =============================================================================
     
     accuracy0 = []
-    
     known_labels = np.array([1] * 43 + [2] * (63 - 43))
-    # known_labels = np.array([1] * 34 + [2] * (53 - 33))
-    # known_labels = np.array([1] * 43 + [2] * 43 + [3]*43)
-    
-    for i in range(100): # to calculate the average accuracy   
-        labels = known_labels.copy()
-        unknown_indices = np.random.choice(np.arange(63), size=int(63 * nn), replace=False)
-        # unknown_indices = np.random.choice(np.arange(54), size=int(54 * nn), replace=False)
-        # unknown_indices = np.random.choice(np.arange(129), size = int(129 * nn), replace=False)
-    
-        
-        labels[unknown_indices] = -1  # Mark some samples as unknown
-        
-        # Define the KNN function to classify unknown samples
-        def knn_classify(pearson_corr, labels, k):
-            for unknown_idx in unknown_indices:
-                # Calculate distance from unknown sample to each known sample
-                distances = []
-                for i, label in enumerate(labels):
-                    if label != -1:  # Only consider known samples
-                        dist = custom_distance(pearson_corr[unknown_idx], pearson_corr[i])
-                        distances.append((dist, label))
-                
-                # Sort distances and select the k closest labels
-                k_nearest_labels = [label for _, label in sorted(distances, key=lambda x: x[0])[:k]]
-                
-                # Assign the most common label among the k nearest neighbors
-                majority_label = Counter(k_nearest_labels).most_common(1)[0][0]
-                labels[unknown_idx] = majority_label  # Assign label to unknown sample
-        
-            return labels
-        
-        # Run the KNN classification
-        final_labels = knn_classify(pearson_corr, labels, k)
-        # print("Final Labels:", final_labels)
-        
-        final_labels = final_labels.reshape(63, 1)   
-        # final_labels = final_labels.reshape(54, 1)   
-        # final_labels = final_labels.reshape(129, 1)  
-        
-        
-        accuracy = calculate_accuracy(final_labels, labels0)
-        # print("Final accuracy:", accuracy)
-        accuracy0.append(accuracy)
-    
-    print(np.mean(accuracy0[:]))
-    
-    
-    
-       
+
     # =============================================================================
     # traditional KNN  suceessfully on 04/11/2024
     # =============================================================================
       
     accuracy0 = []
-    # # known_labels = np.array([1] * 43 + [2] * (63 - 43))
-    # known_labels = np.array([1] * 34 + [2] * (53 - 33))
+
     
-    for i in range(100):    
+    for i in range(10):    
         labels = known_labels.copy()
         unknown_indices = np.random.choice(np.arange(63), size=int(63 * nn), replace=False)
-        # unknown_indices = np.random.choice(np.arange(54), size=int(54 * nn), replace=False)
         labels[unknown_indices] = -1  # Mark some samples as unknown
         
         
@@ -186,65 +138,50 @@ for tt in range(9): # to run it multiple times and obtain the avrage
     
     print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
     
-    
-
-
 
   
+    #%%
+
+    # =============================================================================
+    # Assume we know 95% of these labels
+    known_labels = np.array([1] * 43 + [2] * (63 - 43))
+
+    accuracy0 = []
     
-    # # =============================================================================
-    # # Dong's approach for user-feeders connection identification 
-    # # using available information
-    # # =============================================================================
-    # # Assume we know 95% of these labels
-    # # known_labels = np.array([1] * 43 + [2] * (63 - 43))
-    # known_labels = np.array([1] * 34 + [2] * (53 - 33))
-    # # known_labels = np.array([1] * 43 + [2] * 43 +[3] * 43)
-    # accuracy0 = []
-    
-    # for i in range(100):
-    #     labels = known_labels.copy()
-    #     # unknown_indices = np.random.choice(np.arange(63), size=int(63 * nn), replace=False)
-    #     unknown_indices = np.random.choice(np.arange(54), size=int(54 * nn), replace=False)
-    #     # unknown_indices = np.random.choice(np.arange(129), size=int(129 * nn), replace=False)
-    #     labels[unknown_indices] = -1  # Mark some samples as unknown
+    for i in range(10):
+        labels = known_labels.copy()
+        unknown_indices = np.random.choice(np.arange(63), size=int(63 * nn), replace=False)
+        labels[unknown_indices] = -1  # Mark some samples as unknown
         
-    #     # Function to find the nearest label for unknown samples
-    #     def classify_unknown_samples(V, labels):
-    #         for unknown_idx in unknown_indices:
-    #             # Calculate distance from unknown sample to all known samples
-    #             distances = []
-    #             for i, label in enumerate(labels):
-    #                 if label != -1:  # Only consider known labels
-    #                     dist = custom_distance(V[unknown_idx], V[i])
-    #                     distances.append((dist, label))
+        # Function to find the nearest label for unknown samples
+        def classify_unknown_samples(V, labels):
+            for unknown_idx in unknown_indices:
+                # Calculate distance from unknown sample to all known samples
+                distances = []
+                for i, label in enumerate(labels):
+                    if label != -1:  # Only consider known labels
+                        dist = custom_distance(V[unknown_idx], V[i])
+                        distances.append((dist, label))
                 
-    #             # Sort by distance and take the label of the closest sample
-    #             nearest_label = min(distances, key=lambda x: x[0])[1]
-    #             labels[unknown_idx] = nearest_label  # Assign the nearest label to the unknown sample
+                # Sort by distance and take the label of the closest sample
+                nearest_label = min(distances, key=lambda x: x[0])[1]
+                labels[unknown_idx] = nearest_label  # Assign the nearest label to the unknown sample
         
-    #         return labels
+            return labels
         
-    #     # Classify unknown samples and get final labels
-    #     final_labels = classify_unknown_samples(V, labels)
-    #     # print("Final Labels:", final_labels)
+        # Classify unknown samples and get final labels
+        final_labels = classify_unknown_samples(V, labels)
+        # print("Final Labels:", final_labels)
         
-    #     if len(V) ==63:
-    #         labels = labels.reshape(63, 1)
-    #     if len(V) ==48:
-    #         labels = labels.reshape(48, 1)
-    #     if len(V) ==45:
-    #         labels = labels.reshape(45, 1)    
-    #     if len(V) ==54:
-    #         labels = labels.reshape(54, 1)    
-    #     if len(V) ==129:
-    #         labels = labels.reshape(129, 1) 
-    #     accuracy = calculate_accuracy(labels, labels0)
+        if len(V) ==63:
+            labels = labels.reshape(63, 1)
+  
+        accuracy = calculate_accuracy(labels, labels0)
         
-    #     # print("Final accuracy:", accuracy)
-    #     accuracy0.append(accuracy)
+        print("Final accuracy:", accuracy)
+        accuracy0.append(accuracy)
         
-    # print(np.mean(accuracy0[:]))
+    print(np.mean(accuracy0[:]))
     
     
     
